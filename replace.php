@@ -26,25 +26,33 @@ output:
     ...
 */
 
-$pflege = new PregMatchReplace( // when making regexp, make sure it doesn't break everything on second attempt
+//* an example of regular expression for replacing the phrases above
+// when making regexp, make sure it doesn't break everything on second attempt, just in case
+$pflege = new PregMatchReplace(
     '/(?:sogenannte )*([”„]*24[- H]+(?:Stunden[”]?[- ]+)?(?:Pflege|Betreuung))/i', // replace what
     'sogenannte $1' // replace with
 );
-/*
+//*/
+//* an example of database changes
+// arguments: db table name, the content column, the unique column, regex as explained above, hide rows with no results, sql where statements, sql order by statements, sql limit statements
 $content = new TargetDatabase( 'posts', 'post_content', 'ID', $pflege, true,
     '`post_status` = "publish" AND ( `post_type` = "post" OR `post_type` = "page" )',
     '`post_type` ASC, `id` ASC',
     '100000'
 );
 //*/
-//*
+/* an example of files changes
+// arguments: path to directory, array of files extensions, regex as explained above, hide rows with no results
 $content = new TargetFiles(
     __DIR__ . '/' . 'wp-content/themes',
     ['php'], $pflege, true
 );
 //*/
 
+// print results with no changes
 $content->test();
+
+// apply changes and print results
 //$content->run();
 
 
