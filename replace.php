@@ -27,21 +27,23 @@ output:
 */
 
 $pflege = new PregMatchReplace( // when making regexp, make sure it doesn't break everything on second attempt
-    '/(?:sogenannte )*([”„]*24[- H]+(?:Stunden[”]?[- ]+)?(?:Pflege|Betreuung)[”]*)/i',
-    'sogenannte $1'
+    '/(?:sogenannte )*([”„]*24[- H]+(?:Stunden[”]?[- ]+)?(?:Pflege|Betreuung))/i', // replace what
+    'sogenannte $1' // replace with
 );
-
-$content = new TargetDatabase( 'posts', 'post_content', 'ID', $pflege, false,
-    '`post_status` = "publish"',
+/*
+$content = new TargetDatabase( 'posts', 'post_content', 'ID', $pflege, true,
+    '`post_status` = "publish" AND ( `post_type` = "post" OR `post_type` = "page" )',
     '`post_type` ASC, `id` ASC',
     '100000'
 );
-/*
+//*/
+//*
 $content = new TargetFiles(
     __DIR__ . '/' . 'wp-content/themes',
-    ['php'], $pflege, false
+    ['php'], $pflege, true
 );
 //*/
+
 $content->test();
 //$content->run();
 
@@ -79,7 +81,8 @@ class TargetDatabase {
     
     public function test() {
         
-        $data = $this->select();
+        if ( !$data = $this->select() )
+            return false;
         
         foreach( $data as $v ) {
 
@@ -93,7 +96,8 @@ class TargetDatabase {
     
     public function run() {
 
-        $data = $this->select();
+        if ( !$data = $this->select() )
+            return false;
         
         foreach( $data as $v ) {
 
@@ -111,12 +115,13 @@ class TargetDatabase {
         $posts = 'SELECT
 
         `'.$this->t->IDCol.'`,
-        `'.$this->t->contCol.'`,
+        `'.$this->t->contCol.'`
 
         FROM `'.$this->t->prefix.$this->t->table.'`
         '.( $where ? 'WHERE '.$this->t->where : '' ).'
         '.( $order ? 'ORDER BY '.$this->t->order : '' ).'
         '.( $limit ? 'LIMIT '.$this->t->limit : '' )
+        ;
 
         return $this->queryToArray( $posts );
     }
@@ -137,10 +142,11 @@ class TargetDatabase {
     
     private function report( $id, $count = 0, $matches = [] ) {
 
-        return  'ID: '.$id."\t\t".''.( $count ? '' : ' NOT' ).'found or effected: '.$count.
-                '<font color="#'.( $count ? '00ff00' : 'ff0000' ).'">'.$count.'</font> '.
+        return  'ID: '.$id."\n".
+                ( $count ? '' : 'NOT ' ).'found or effected: '.
+                '<font color="#'.( $count ? '00ff00' : 'ff0000' ).'">'.( $count ? $count : '0' ).'</font> '.
                 ( $this->t->table == 'posts' ? '<a href="\?p='.$id.'">&gt;&gt;</a>' : '' ).
-                ( $matches[0] ? "\n".implode( "\n", $matches ) : '' ).
+                ( $matches[0] ? "\n".'<font color="#999999">'.implode( "\n", $matches ) : '' ).'</font>'.
                 "\n";
     
     }
@@ -163,7 +169,6 @@ class TargetDatabase {
 }
 
 
-
 class TargetFiles {
 
     private $dir = '', $types = [], $files = [];
@@ -180,9 +185,9 @@ class TargetFiles {
     
     public function test() {
         
-        $files = $this->scan();
+        $this->scan();
         
-        foreach( $files as $v ) {
+        foreach( $this->files as $v ) {
 
             $content = $this->read( $v );
             $match = $this->reg->match( $content );
@@ -195,7 +200,9 @@ class TargetFiles {
     
     public function run() {
 
-        foreach( $files as $v ) {
+        $this->scan();
+        
+        foreach( $this->files as $v ) {
 
             $content = $this->read( $v );
             $match = $this->reg->replace( $content );
@@ -256,15 +263,15 @@ class TargetFiles {
 
     private function report( $file, $count = 0, $matches = [] ) {
 
-        return  'File: '.$file."\t\t".''.( $count ? '' : ' NOT' ).'found or effected: '.$count.
-                '<font color="#'.( $count ? '00ff00' : 'ff0000' ).'">'.$count.'</font> '.
-                ( $matches[0] ? "\n".implode( "\n", $matches ) : '' ).
+        return  $file."\n".
+                ( $count ? '' : ' NOT' ).'found or effected: '.
+                '<font color="#'.( $count ? '00ff00' : 'ff0000' ).'">'.( $count ? $count : '0' ).'</font> '.
+                ( $matches[0] ? "\n".'<font color="#999999">'.implode( "\n", $matches ) : '' ).'</font>'.
                 "\n";
     
     }
 
 }
-
 
 
 class PregMatchReplace {
