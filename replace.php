@@ -28,11 +28,13 @@ output:
 
 //* an example of regular expression for replacing the phrases above
 // when making regexp, make sure it doesn't break everything on second attempt, just in case
+//*
 $pflege = new PregMatchReplace(
     '/(?:sogenannte )*([”„]*24[- H]+(?:Stunden[”]?[- ]+)?(?:Pflege|Betreuung))/i', // replace what
     'sogenannte $1' // replace with
 );
 //*/
+
 //* an example of database changes
 // arguments: db table name, the content column, the unique column, regex as explained above, hide rows with no results, sql where statements, sql order by statements, sql limit statements
 $content = new TargetDatabase( 'posts', 'post_content', 'ID', $pflege, true,
@@ -87,8 +89,8 @@ class TargetDatabase {
         
     }
     
-    public function test() {
-        
+    public function test( $silent = false ) {
+
         if ( !$data = $this->select() )
             return false;
         
@@ -96,6 +98,11 @@ class TargetDatabase {
 
             $match = $this->reg->match( $v[ $this->t->contCol ] );
             if ( !$this->hideEmpty || $match ) {
+                if ( !$silent && is_array( $match['matches'] ) ) {
+                    foreach ( $match['matches'] as &$w ) {
+                        $w = $w . ' --&gt ' . preg_replace( $this->reg->from, $this->reg->to, $w );
+                    }
+                }
                 echo $this->report( $v[ $this->t->IDCol ], $match['count'], $match['matches'] );
             }
         }
@@ -191,7 +198,7 @@ class TargetFiles {
         
     }
     
-    public function test() {
+    public function test( $silent = false ) {
         
         $this->scan();
         
@@ -200,6 +207,11 @@ class TargetFiles {
             $content = $this->read( $v );
             $match = $this->reg->match( $content );
             if ( !$this->hideEmpty || $match ) {
+                if ( !$silent && is_array( $match['matches'] ) ) {
+                    foreach ( $match['matches'] as &$w ) {
+                        $w = $w . ' --&gt ' . preg_replace( $this->reg->from, $this->reg->to, $w );
+                    }
+                }
                 echo $this->report( $v, $match['count'], $match['matches'] );
             }
         }
@@ -284,7 +296,7 @@ class TargetFiles {
 
 class PregMatchReplace {
 
-    private $from, $to;
+    public $from, $to;
 
     public function __construct( $from = '', $to = '' ) {
         $this->from = $from;
